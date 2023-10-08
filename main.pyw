@@ -115,6 +115,12 @@ def edit_task_name():
             refresh_todo_list()
             refresh_completed_list()
 
+# Function to handle right-click context menu event
+def show_context_menu(event):
+    selected_item = todo_list.selection() or completed_list.selection()
+    if selected_item:
+        context_menu.post(event.x_root, event.y_root)
+
 # Create the main window
 root = tk.Tk()
 root.title("Task Manager")
@@ -186,6 +192,14 @@ mark_unfinished_button.pack(fill=tk.BOTH, expand=True)
 delete_button.pack(fill=tk.BOTH, expand=True)
 edit_notes_button.pack(fill=tk.BOTH, expand=True)
 edit_task_name_button.pack(fill=tk.BOTH, expand=True)
+
+# Create a context menu for editing notes
+context_menu = tk.Menu(root, tearoff=0)
+context_menu.add_command(label="Edit Notes", command=edit_notes)
+
+# Bind the context menu to the task listviews
+todo_list.bind("<Button-3>", show_context_menu)
+completed_list.bind("<Button-3>", show_context_menu)
 
 # Refresh task lists
 refresh_todo_list()
