@@ -27,6 +27,8 @@ def reset_tasks():
         if not last_reset_date or last_reset_date[0] != str(today):
             cursor.execute("UPDATE tasks SET status='Todo', date_reset=? WHERE status='Completed'", (str(today),))
             conn.commit()
+            refresh_todo_list()
+            refresh_completed_list()
 
 # Function to add a task with notes
 def add_task():
@@ -123,7 +125,7 @@ def show_context_menu(event):
 
 # Create the main window
 root = tk.Tk()
-root.title("Task Manager")
+root.title("TaskMasterX")
 
 # Create and configure the notebook
 notebook = ttk.Notebook(root)
