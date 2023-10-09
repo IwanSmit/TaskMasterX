@@ -18,7 +18,7 @@ cursor.execute('''
 ''')
 conn.commit()
 
-# Function to reset tasks to 'Unfinished' on Monday
+# Function to reset tasks to 'Unfinished' on Monday and refresh the list
 def reset_tasks():
     today = datetime.date.today()
     if today.weekday() == 0:  # Monday corresponds to 0 in the weekday() function
@@ -90,21 +90,6 @@ def delete_task():
         refresh_todo_list()
         refresh_completed_list()
 
-# Function to edit task notes
-def edit_notes():
-    selected_item = todo_list.selection() or completed_list.selection()
-    if selected_item:
-        task = todo_list.item(selected_item, 'values')[0].split(".")[1].strip() if todo_list.selection() else completed_list.item(selected_item, 'values')[0].split(".")[1].strip()  # Extract task name
-        cursor.execute("SELECT notes FROM tasks WHERE task=?", (task,))
-        result = cursor.fetchone()
-        notes = result[0] if result is not None else ""
-        edited_notes = simpledialog.askstring("Edit Notes", f"Edit notes for {task}: ", initialvalue=notes)
-        if edited_notes is not None:
-            cursor.execute("UPDATE tasks SET notes=? WHERE task=?", (edited_notes, task))
-            conn.commit()
-            refresh_todo_list()
-            refresh_completed_list()
-
 # Function to edit task name
 def edit_task_name():
     selected_item = todo_list.selection()
@@ -117,11 +102,20 @@ def edit_task_name():
             refresh_todo_list()
             refresh_completed_list()
 
-# Function to handle right-click context menu event
-def show_context_menu(event):
-    selected_item = todo_list.selection() or completed_list.selection()
+# Function to edit task notes
+def edit_notes():
+    selected_item = todo_list.selection()
     if selected_item:
-        context_menu.post(event.x_root, event.y_root)
+        task = todo_list.item(selected_item, 'values')[0].split(".")[1].strip()  # Extract task name
+        cursor.execute("SELECT notes FROM tasks WHERE task=?", (task,))
+        result = cursor.fetchone()
+        notes = result[0] if result is not None else ""
+        edited_notes = simpledialog.askstring("Edit Notes", f"Edit notes for {task}: ", initialvalue=notes)
+        if edited_notes is not None:
+            cursor.execute("UPDATE tasks SET notes=? WHERE task=?", (edited_notes, task))
+            conn.commit()
+            refresh_todo_list()
+            refresh_completed_list()
 
 # Create the main window
 root = tk.Tk()
@@ -195,19 +189,37 @@ delete_button.pack(fill=tk.BOTH, expand=True)
 edit_notes_button.pack(fill=tk.BOTH, expand=True)
 edit_task_name_button.pack(fill=tk.BOTH, expand=True)
 
-# Create a context menu for editing notes
-context_menu = tk.Menu(root, tearoff=0)
-context_menu.add_command(label="Edit Notes", command=edit_notes)
+# Create context menus for editing notes and task name
+context_menu_task = tk.Menu(root, tearoff=0)
+context_menu_task.add_command(label="Edit Task Name", command=edit_task_name)
 
-# Bind the context menu to the task listviews
-todo_list.bind("<Button-3>", show_context_menu)
-completed_list.bind("<Button-3>", show_context_menu)
+context_menu_notes = tk.Menu(root, tearoff=0)
+context_menu_notes.add_command(label="Edit Notes", command=edit_notes)
+
+# Bind the context menus to the task and notes columns separately
+def show_context_menu_task(event):
+    task_item = todo_list.identify_column(event.x)
+    if task_item == "#1":  # Check if the clicked column is the "Task" column
+        selected_item = todo_list.selection()
+        if selected_item:
+            context_menu_task.post(event.x_root, event.y_root)
+
+def show_context_menu_notes(event):
+    notes_item = todo_list.identify_column(event.x)
+    if notes_item == "#2":  # Check if the clicked column is the "Notes" column
+        selected_item = todo_list.selection()
+        if selected_item:
+            context_menu_notes.post(event.x_root, event.y_root)
+
+todo_list.bind("<Button-3>", show_context_menu_task)
+notes_column = "#2"  # Change this to match the column number of your "Notes" column
+todo_list.bind("<Button-3>", show_context_menu_notes, add=True)
 
 # Refresh task lists
 refresh_todo_list()
 refresh_completed_list()
 
-# Reset tasks to 'Unfinished' on Mondays
+# Reset tasks to 'Unfinished' on Mondays and refresh the lists
 reset_tasks()
 
 # Start the GUI event loop
