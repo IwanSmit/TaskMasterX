@@ -17,7 +17,7 @@ cursor.execute('''
     )
 ''')
 conn.commit()
-
+#
 # Function to reset tasks to 'Unfinished' on Monday
 def reset_tasks():
     today = datetime.date.today()
