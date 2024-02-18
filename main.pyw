@@ -1,10 +1,12 @@
 #TaskMasterX
+#IwanSmit
 
 import tkinter as tk
 import tkinter.ttk as ttk
 import sqlite3
 import datetime
-from tkinter import simpledialog
+from tkinter import simpledialog, messagebox
+import os
 
 # Create a SQLite database to store tasks and notes
 conn = sqlite3.connect('tasks.db')
@@ -20,13 +22,27 @@ cursor.execute('''
 ''')
 conn.commit()
 
-# Function to reset tasks to 'Unfinished' on Monday
+# Function to print the contents of the 'tasks' table
+def print_database_contents():
+    cursor.execute("SELECT * FROM tasks")
+    rows = cursor.fetchall()
+    for row in rows:
+        print(row)
+
+# Call the function to print the database contents
+print_database_contents()
+
 def reset_tasks():
     today = datetime.date.today()
-    if today.weekday() == 0:  # Monday corresponds to 0 in the weekday() function
-        cursor.execute("SELECT date_reset FROM tasks LIMIT 1")
-        last_reset_date = cursor.fetchone()
-        if not last_reset_date or last_reset_date[0] != str(today):
+    cursor.execute("SELECT date_reset FROM tasks LIMIT 1")
+    last_reset_date = cursor.fetchone()
+    
+    if last_reset_date:
+        print(f'Variable is: {last_reset_date}')
+        last_reset_date = datetime.datetime.strptime(last_reset_date[0], "%Y-%m-%d").date()
+        days_difference = (today - last_reset_date).days
+
+        if days_difference > 7 or today.weekday() == 0:  # Check if more than 7 days have passed or if today is Monday
             cursor.execute("UPDATE tasks SET status='Todo', date_reset=? WHERE status='Completed'", (str(today),))
             conn.commit()
             refresh_lists()
@@ -94,6 +110,21 @@ def refresh_lists():
         else:
             completed_list.insert('', 'end', values=(f"{idx}. {task_text}", notes_text))
 
+def export_tasks():
+    cursor.execute("SELECT * FROM tasks")
+    tasks = cursor.fetchall()
+
+    with open('taskListExport.txt', 'w') as file:
+        for task in tasks:
+            task_text = task[1]
+            file.write(f"{task_text}\n")
+
+     # Check if the file exists before showing the confirmation
+    if os.path.exists('taskListExport.txt'):
+        messagebox.showinfo("Export Successful", "Tasks exported successfully to 'taskListExport.txt'")
+    else:
+        messagebox.showwarning("Export Failed", "Exporting tasks failed. Please try again.")
+
 # Create the main window
 root = tk.Tk()
 root.title("TaskMasterX")
@@ -149,29 +180,35 @@ scrollbar_todo.pack(fill=tk.Y, side=tk.RIGHT)
 scrollbar_completed.pack(fill=tk.Y, side=tk.RIGHT)
 
 # Create task entry field and notes entry field
+
+task_entry = tk.Label(root, text="Task:")
+task_entry.pack(fill=tk.BOTH, expand=True)
+
 task_entry = tk.Entry(root)
 task_entry.pack(fill=tk.BOTH, expand=True)
 
 notes_label = tk.Label(root, text="Notes:")
 notes_label.pack(fill=tk.BOTH, expand=True)
 
-notes_entry = tk.Text(root, height=4)
+notes_entry = tk.Text(root, height=2)
 notes_entry.pack(fill=tk.BOTH, expand=True)
 
 # Create buttons
 add_button = tk.Button(root, text="Add Task", command=add_task)
+delete_button = tk.Button(root, text="Delete Task", command=lambda: delete_task(get_selected_task()))
+edit_task_name_button = tk.Button(root, text="Edit Task", command=lambda: edit_task_name(get_selected_task()))
+edit_notes_button = tk.Button(root, text="Edit Notes", command=lambda: edit_notes(get_selected_task()))
 mark_finished_button = tk.Button(root, text="Mark as Finished", command=lambda: move_to_completed(get_selected_task()))
 mark_unfinished_button = tk.Button(root, text="Mark as Unfinished", command=lambda: move_to_todo(get_selected_task()))
-delete_button = tk.Button(root, text="Delete Task", command=lambda: delete_task(get_selected_task()))
-edit_notes_button = tk.Button(root, text="Edit Notes", command=lambda: edit_notes(get_selected_task()))
-edit_task_name_button = tk.Button(root, text="Edit Task Name", command=lambda: edit_task_name(get_selected_task()))
+export_button = tk.Button(root, text="Export Tasks", command=export_tasks)
 
 add_button.pack(fill=tk.BOTH, expand=True)
+delete_button.pack(fill=tk.BOTH, expand=True)
+edit_task_name_button.pack(fill=tk.BOTH, expand=True)
+edit_notes_button.pack(fill=tk.BOTH, expand=True)
 mark_finished_button.pack(fill=tk.BOTH, expand=True)
 mark_unfinished_button.pack(fill=tk.BOTH, expand=True)
-delete_button.pack(fill=tk.BOTH, expand=True)
-edit_notes_button.pack(fill=tk.BOTH, expand=True)
-edit_task_name_button.pack(fill=tk.BOTH, expand=True)
+export_button.pack(fill=tk.BOTH, expand=True)
 
 # Function to get the selected task from the list
 def get_selected_task():
